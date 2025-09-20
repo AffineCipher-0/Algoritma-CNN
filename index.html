@@ -3,667 +3,268 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Simulasi Interaktif: Klasifikasi Gambar dengan CNN</title>
+    <title>Simulasi Klasifikasi Gambar (CNN)</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
         body {
             font-family: 'Inter', sans-serif;
-            -webkit-font-smoothing: antialiased;
-            -moz-osx-font-smoothing: grayscale;
         }
-        .step-card {
-            transition: all 0.3s ease-in-out;
-            opacity: 0.5;
-            transform: scale(0.98);
+        .loader {
+            border: 5px solid #f3f3f3;
+            border-top: 5px solid #3498db;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
         }
-        .step-card.active {
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .process-step {
+            opacity: 0;
+            transform: translateY(20px);
+            transition: opacity 0.5s ease-out, transform 0.5s ease-out;
+        }
+        .process-step.active {
             opacity: 1;
-            transform: scale(1);
-            border-color: #3b82f6; /* blue-500 */
-            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-        }
-        canvas {
-            border: 1px solid #d1d5db; /* gray-300 */
-            border-radius: 0.5rem;
-        }
-        #drawingCanvas {
-            cursor: crosshair;
-            touch-action: none;
-        }
-        .matrix-container {
-            display: grid;
-            gap: 4px;
-        }
-        .matrix-cell {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            width: 30px;
-            height: 30px;
-            border: 1px solid #9ca3af; /* gray-400 */
-            border-radius: 4px;
-            font-size: 0.8rem;
-            font-weight: 500;
-        }
-        .progress-bar-bg {
-            background-color: #e5e7eb; /* gray-200 */
-            border-radius: 9999px;
-            overflow: hidden;
-        }
-        .progress-bar-fill {
-            background-color: #3b82f6; /* blue-500 */
-            transition: width 0.3s ease;
-        }
-        /* Custom file input */
-        .custom-file-input {
-            color: transparent;
-        }
-        .custom-file-input::-webkit-file-upload-button {
-            visibility: hidden;
-        }
-        .custom-file-input::before {
-            content: 'Unggah Gambar';
-            color: #3b82f6;
-            display: inline-block;
-            background: -webkit-linear-gradient(top, #f9f9f9, #e3e3e3);
-            border: 1px solid #999;
-            border-radius: 0.5rem;
-            padding: 6px 12px;
-            outline: none;
-            white-space: nowrap;
-            -webkit-user-select: none;
-            cursor: pointer;
-            font-weight: 600;
-            font-size: 10pt;
-        }
-        .custom-file-input:hover::before {
-            border-color: black;
-        }
-        .custom-file-input:active {
-            outline: 0;
-        }
-        .custom-file-input:active::before {
-            background: -webkit-linear-gradient(top, #e3e3e3, #f9f9f9);
+            transform: translateY(0);
         }
     </style>
 </head>
-<body class="bg-gray-50 text-gray-800">
+<body class="bg-gray-100 text-gray-800 flex items-center justify-center min-h-screen p-4">
 
-    <div class="container mx-auto p-4 md:p-8">
-        <!-- Header -->
-        <header class="text-center mb-8">
-            <h1 class="text-3xl md:text-4xl font-bold text-gray-900">Simulasi Klasifikasi Gambar dengan CNN</h1>
-            <p class="mt-2 text-lg text-gray-600">Pelajari langkah demi langkah bagaimana Convolutional Neural Network (CNN) bekerja.</p>
-        </header>
-
-        <!-- Controls -->
-        <div class="flex flex-wrap justify-center items-center gap-4 mb-8 bg-white p-4 rounded-xl shadow-md sticky top-4 z-10">
-            <button id="startButton" class="px-6 py-2 bg-blue-600 text-white font-semibold rounded-lg shadow-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-75 transition-transform transform hover:scale-105">
-                Mulai Simulasi
-            </button>
-            <button id="nextButton" disabled class="px-6 py-2 bg-gray-400 text-white font-semibold rounded-lg cursor-not-allowed">
-                Langkah Berikutnya &rarr;
-            </button>
-            <button id="resetButton" class="px-6 py-2 bg-red-500 text-white font-semibold rounded-lg shadow-md hover:bg-red-600 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-opacity-75 transition-transform transform hover:scale-105">
-                Reset
-            </button>
+    <div class="w-full max-w-4xl bg-white rounded-xl shadow-lg p-6 md:p-8">
+        <div class="text-center mb-6">
+            <h1 class="text-2xl md:text-3xl font-bold text-gray-900">Simulasi Klasifikasi Gambar</h1>
+            <p class="text-gray-600 mt-2">Berdasarkan dokumen "Image Classification Algoritma CNN"</p>
         </div>
-        
-        <!-- Status Log -->
-        <div id="statusLog" class="text-center mb-8 text-gray-600 font-medium h-6"></div>
 
-        <!-- Simulation Steps -->
-        <div id="simulation-container" class="space-y-8">
-            
-            <!-- Step 1: Input Image -->
-            <div id="step-1" class="step-card bg-white p-6 rounded-xl border-2 border-transparent active">
-                <h2 class="text-xl font-bold mb-4 text-gray-900">Langkah 1: Siapkan Gambar Input Anda</h2>
-                <p class="mb-4 text-gray-600">Anda bisa menggambar sebuah angka di kanvas kiri, atau mengunggah gambar Anda sendiri. Gambar akan diproses menjadi format 28x28 piksel grayscale (kanan) yang siap dianalisis oleh CNN.</p>
-                <div class="grid md:grid-cols-2 gap-6 items-start text-center">
-                    <div>
-                        <h3 class="font-semibold mb-2">Gambar atau Unggah di Sini</h3>
-                        <canvas id="drawingCanvas" width="280" height="280" class="bg-white"></canvas>
-                        <div class="mt-4 flex justify-center gap-4">
-                             <input type="file" id="imageUploader" accept="image/*" class="custom-file-input">
-                             <button id="clearCanvasButton" class="px-4 py-2 bg-gray-200 text-gray-800 font-semibold rounded-lg hover:bg-gray-300">Bersihkan</button>
-                        </div>
-                    </div>
-                    <div>
-                        <h3 class="font-semibold mb-2">Input untuk CNN (28x28)</h3>
-                        <canvas id="processedCanvas" width="280" height="280"></canvas>
-                        <p class="text-xs mt-2 text-gray-500">Ini adalah representasi data yang akan dilihat oleh model.</p>
-                    </div>
-                </div>
+        <!-- Status Loading Model -->
+        <div id="status-container" class="text-center p-4 bg-blue-50 rounded-lg">
+            <div class="loader mx-auto"></div>
+            <p id="status" class="mt-3 font-semibold text-blue-800">Sedang memuat model AI...</p>
+        </div>
+
+        <div id="main-content" class="hidden">
+            <!-- Area Upload Gambar -->
+            <div class="mb-6">
+                <label for="image-upload-btn" class="w-full cursor-pointer bg-blue-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-blue-700 transition-colors duration-300 flex items-center justify-center text-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                    </svg>
+                    Pilih atau Unggah Gambar
+                </label>
+                <input type="file" id="image-upload-btn" class="hidden" accept="image/*">
             </div>
 
-            <!-- Step 2: Convolution -->
-            <div id="step-2" class="step-card bg-white p-6 rounded-xl border-2 border-transparent">
-                <h2 class="text-xl font-bold mb-4 text-gray-900">Langkah 2: Konvolusi (Convolution)</h2>
-                <p class="mb-4 text-gray-600">Filter (kernel) 3x3 digeser ke seluruh gambar input (28x28) untuk mendeteksi fitur dasar. Hasilnya adalah sebuah "Feature Map" berukuran 26x26.</p>
-                <div class="grid md:grid-cols-3 gap-6 items-center text-center">
-                    <div>
-                        <h3 class="font-semibold mb-2">Input (28x28)</h3>
-                        <canvas id="convInputCanvas" width="280" height="280"></canvas>
-                    </div>
-                    <div>
-                        <h3 class="font-semibold mb-2">Filter (3x3)</h3>
-                        <div id="filterMatrix" class="matrix-container inline-grid" style="grid-template-columns: repeat(3, minmax(0, 1fr));"></div>
-                    </div>
-                    <div>
-                        <h3 class="font-semibold mb-2">Feature Map (26x26)</h3>
-                        <canvas id="featureMapCanvas" width="260" height="260"></canvas>
-                    </div>
+            <!-- Kontainer untuk Gambar dan Hasil -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
+                <!-- Preview Gambar -->
+                <div id="image-container" class="bg-gray-100 rounded-lg p-4 min-h-[250px] flex items-center justify-center border-2 border-dashed border-gray-300">
+                     <p id="image-placeholder" class="text-gray-500 text-center">Preview gambar akan muncul di sini</p>
+                    <img id="uploaded-image" class="hidden rounded-lg max-w-full h-auto max-h-80" alt="Gambar yang diunggah">
                 </div>
-            </div>
-            
-            <!-- Step 3: ReLU Activation -->
-            <div id="step-3" class="step-card bg-white p-6 rounded-xl border-2 border-transparent">
-                <h2 class="text-xl font-bold mb-4 text-gray-900">Langkah 3: Aktivasi ReLU</h2>
-                <p class="mb-4 text-gray-600">Fungsi aktivasi ReLU diterapkan, mengubah semua nilai negatif pada Feature Map menjadi 0 untuk memperkenalkan non-linearitas.</p>
-                <div class="grid md:grid-cols-2 gap-6 items-center text-center">
-                     <div>
-                        <h3 class="font-semibold mb-2">Feature Map (Sebelum ReLU)</h3>
-                        <canvas id="reluInputCanvas" width="260" height="260"></canvas>
+
+                <!-- Hasil Prediksi -->
+                <div id="prediction-container" class="min-h-[250px]">
+                    <h2 class="font-bold text-xl mb-3 text-gray-700">Hasil Analisis:</h2>
+                    <div id="prediction-loader" class="hidden items-center">
+                         <div class="loader !w-8 !h-8 !border-4 mr-3"></div>
+                         <span class="text-gray-600 font-medium">Menganalisis gambar...</span>
                     </div>
-                    <div>
-                        <h3 class="font-semibold mb-2">Feature Map (Setelah ReLU)</h3>
-                        <canvas id="reluOutputCanvas" width="260" height="260"></canvas>
-                    </div>
+                    <ul id="prediction-list" class="space-y-2">
+                        <li id="prediction-placeholder" class="text-gray-500">Hasil prediksi akan ditampilkan di sini.</li>
+                    </ul>
                 </div>
             </div>
 
-            <!-- Step 4: Pooling -->
-            <div id="step-4" class="step-card bg-white p-6 rounded-xl border-2 border-transparent">
-                <h2 class="text-xl font-bold mb-4 text-gray-900">Langkah 4: Pooling (Max Pooling)</h2>
-                <p class="mb-4 text-gray-600">Max Pooling dengan jendela 2x2 diterapkan untuk mereduksi ukuran Feature Map menjadi setengahnya (13x13), mempertahankan fitur yang paling menonjol.</p>
-                 <div class="grid md:grid-cols-2 gap-6 items-center text-center">
-                     <div>
-                        <h3 class="font-semibold mb-2">Input Pooling (26x26)</h3>
-                        <canvas id="poolingInputCanvas" width="260" height="260"></canvas>
-                    </div>
+            <!-- Kontainer Visualisasi Proses -->
+            <div id="process-visualization-container" class="mt-8 pt-6 border-t border-gray-200">
+                <!-- Step 1 -->
+                <div id="step-1" class="process-step flex items-start space-x-4 mb-4">
+                    <div class="flex-shrink-0 w-12 h-12 bg-blue-500 text-white rounded-full flex items-center justify-center font-bold text-xl">1</div>
                     <div>
-                        <h3 class="font-semibold mb-2">Output Pooling (13x13)</h3>
-                        <canvas id="poolingOutputCanvas" width="130" height="130"></canvas>
+                        <h3 class="font-bold text-lg text-gray-800">Input Gambar & Representasi Piksel</h3>
+                        <p class="text-gray-600">Gambar yang Anda unggah diubah menjadi matriks angka (piksel). Komputer melihat gambar ini sebagai data numerik (nilai RGB) untuk diproses.</p>
+                    </div>
+                </div>
+                 <!-- Step 2 -->
+                <div id="step-2" class="process-step flex items-start space-x-4 mb-4">
+                    <div class="flex-shrink-0 w-12 h-12 bg-blue-500 text-white rounded-full flex items-center justify-center font-bold text-xl">2</div>
+                    <div>
+                        <h3 class="font-bold text-lg text-gray-800">Konvolusi & Ekstraksi Fitur</h3>
+                        <p class="text-gray-600">Model menggunakan 'filter' untuk memindai gambar dan mendeteksi fitur-fitur dasar seperti tepian, sudut, dan tekstur. Setiap filter menghasilkan 'peta fitur' baru.</p>
+                    </div>
+                </div>
+                 <!-- Step 3 -->
+                <div id="step-3" class="process-step flex items-start space-x-4 mb-4">
+                    <div class="flex-shrink-0 w-12 h-12 bg-blue-500 text-white rounded-full flex items-center justify-center font-bold text-xl">3</div>
+                    <div>
+                        <h3 class="font-bold text-lg text-gray-800">Pooling & Penyederhanaan</h3>
+                        <p class="text-gray-600">Peta fitur disederhanakan (downsampling) untuk mengurangi ukuran data namun tetap mempertahankan informasi yang paling penting. Ini membuat model lebih efisien.</p>
+                    </div>
+                </div>
+                 <!-- Step 4 -->
+                 <div id="step-4" class="process-step flex items-start space-x-4 mb-4">
+                    <div class="flex-shrink-0 w-12 h-12 bg-blue-500 text-white rounded-full flex items-center justify-center font-bold text-xl">4</div>
+                    <div>
+                        <h3 class="font-bold text-lg text-gray-800">Klasifikasi & Prediksi</h3>
+                        <p class="text-gray-600">Setelah fitur-fitur kompleks teridentifikasi, data 'diratakan' dan dianalisis untuk menghasilkan skor probabilitas untuk setiap kelas objek yang mungkin.</p>
                     </div>
                 </div>
             </div>
-
-            <!-- Step 5: Flattening -->
-            <div id="step-5" class="step-card bg-white p-6 rounded-xl border-2 border-transparent">
-                <h2 class="text-xl font-bold mb-4 text-gray-900">Langkah 5: Flattening</h2>
-                <p class="mb-4 text-gray-600">Matriks 13x13 hasil pooling "diratakan" menjadi sebuah vektor 1D yang panjang (169 elemen) untuk diumpankan ke lapisan selanjutnya.</p>
-                <div class="flex flex-col items-center justify-center">
-                    <canvas id="flattenInputCanvas" width="130" height="130"></canvas>
-                    <div class="text-3xl font-bold my-4">&darr;</div>
-                    <div id="flattenedVector" class="flex flex-wrap gap-1 p-2 bg-gray-100 rounded-lg justify-center w-full max-w-md"></div>
-                </div>
-            </div>
-
-            <!-- Step 6: Fully Connected Layer -->
-            <div id="step-6" class="step-card bg-white p-6 rounded-xl border-2 border-transparent">
-                <h2 class="text-xl font-bold mb-4 text-gray-900">Langkah 6: Fully Connected Layer</h2>
-                <p class="mb-4 text-gray-600">Vektor yang panjang dihubungkan ke lapisan akhir yang akan menghitung probabilitas untuk setiap kelas (angka 0-9).</p>
-                <div class="grid md:grid-cols-3 gap-4 items-center">
-                    <div id="fcInput" class="flex flex-col gap-1 items-center">
-                        <p class="font-semibold mb-2">Input Vektor (169 elemen)</p>
-                        <div class="w-16 h-64 bg-gray-200 rounded-lg border-2 border-gray-300 flex items-center justify-center text-sm text-gray-500"></div>
-                    </div>
-                    <div id="fcConnections" class="flex flex-col justify-around h-64 items-center">
-                        <p class="font-semibold">Koneksi & Bobot</p>
-                        <svg id="connectionsSvg" width="100%" height="250"></svg>
-                    </div>
-                    <div id="fcOutput" class="flex flex-col gap-2 items-center">
-                         <p class="font-semibold mb-2">Output (Probabilitas)</p>
-                         <div class="w-full space-y-2">
-                         </div>
-                    </div>
-                </div>
-            </div>
-            
-            <!-- Step 7: Final Prediction -->
-            <div id="step-7" class="step-card bg-white p-6 rounded-xl border-2 border-transparent">
-                 <h2 class="text-xl font-bold mb-4 text-gray-900">Langkah 7: Hasil Prediksi</h2>
-                 <p class="mb-4 text-gray-600">Kelas dengan probabilitas tertinggi adalah hasil prediksi model.</p>
-                 <div id="predictionResult" class="text-center">
-                    <p class="text-2xl">Model memprediksi gambar ini sebagai angka:</p>
-                    <p id="finalPrediction" class="text-8xl font-bold text-blue-600 my-4">?</p>
-                 </div>
-            </div>
+        </div>
+         <div class="text-center mt-8 text-sm text-gray-500">
+            <p>Menggunakan TensorFlow.js dan model MobileNetV2</p>
         </div>
     </div>
 
+    <!-- TensorFlow.js and MobileNet model -->
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/mobilenet@latest/dist/mobilenet.min.js"></script>
+
     <script>
-    document.addEventListener('DOMContentLoaded', () => {
-        // --- Configuration ---
-        const INPUT_SIZE = 28;
+        const statusElement = document.getElementById('status');
+        const mainContent = document.getElementById('main-content');
+        const statusContainer = document.getElementById('status-container');
+        const imageUploadBtn = document.getElementById('image-upload-btn');
+        const uploadedImage = document.getElementById('uploaded-image');
+        const predictionList = document.getElementById('prediction-list');
+        const imagePlaceholder = document.getElementById('image-placeholder');
+        const predictionPlaceholder = document.getElementById('prediction-placeholder');
+        const predictionLoader = document.getElementById('prediction-loader');
+        const processSteps = document.querySelectorAll('.process-step');
 
-        // --- DOM Elements ---
-        const startButton = document.getElementById('startButton');
-        const nextButton = document.getElementById('nextButton');
-        const resetButton = document.getElementById('resetButton');
-        const statusLog = document.getElementById('statusLog');
-        const imageUploader = document.getElementById('imageUploader');
-        const clearCanvasButton = document.getElementById('clearCanvasButton');
+        let model;
 
-        // --- Canvas Elements & Contexts ---
-        const canvases = {
-            drawing: document.getElementById('drawingCanvas'),
-            processed: document.getElementById('processedCanvas'),
-            convInput: document.getElementById('convInputCanvas'),
-            featureMap: document.getElementById('featureMapCanvas'),
-            reluInput: document.getElementById('reluInputCanvas'),
-            reluOutput: document.getElementById('reluOutputCanvas'),
-            poolingInput: document.getElementById('poolingInputCanvas'),
-            poolingOutput: document.getElementById('poolingOutputCanvas'),
-            flattenInput: document.getElementById('flattenInputCanvas'),
-        };
-        const ctx = {};
-        for (const key in canvases) {
-            ctx[key] = canvases[key].getContext('2d', { willReadFrequently: true });
+        // 1. Memuat model MobileNet saat halaman dibuka
+        async function loadModel() {
+            try {
+                model = await mobilenet.load();
+                console.log("Model loaded successfully");
+                statusContainer.classList.add('hidden');
+                mainContent.classList.remove('hidden');
+            } catch (err) {
+                console.error("Failed to load model", err);
+                statusElement.innerText = 'Gagal memuat model AI. Silakan muat ulang halaman.';
+                statusContainer.querySelector('.loader').classList.add('hidden');
+            }
         }
 
-        // --- Data ---
-        let inputImage = [];
-        const filter = [
-            [0, 1, 0],
-            [1, -4, 1],
-            [0, 1, 0]
-        ]; // Edge detection filter
+        // Fungsi untuk mereset tampilan
+        function resetView() {
+            predictionList.innerHTML = '';
+            predictionPlaceholder.classList.remove('hidden');
+            predictionPlaceholder.innerText = 'Hasil prediksi akan ditampilkan di sini.';
+            processSteps.forEach(step => step.classList.remove('active'));
+        }
 
-        let featureMap, reluMap, pooledMap, flattenedVector;
-
-        // --- State ---
-        let currentStep = 0;
-        let animationFrameId;
-        let isDrawing = false;
-        let lastX = 0;
-        let lastY = 0;
-
-        // --- Drawing Utilities ---
-        const drawMatrix = (context, matrix, cellSize, options = {}) => {
-            const { highlight = null, colorize = false } = options;
-            if (!matrix || matrix.length === 0) return;
-            const rows = matrix.length;
-            const cols = matrix[0].length;
-            context.clearRect(0, 0, context.canvas.width, context.canvas.height);
-            context.font = `${cellSize / 1.5}px Arial`;
-            context.textAlign = 'center';
-            context.textBaseline = 'middle';
-
-            for (let y = 0; y < rows; y++) {
-                for (let x = 0; x < cols; x++) {
-                    const value = matrix[y][x];
+        // 2. Event listener untuk tombol upload
+        imageUploadBtn.addEventListener('change', (event) => {
+            const file = event.target.files[0];
+            if (file) {
+                resetView();
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    uploadedImage.src = e.target.result;
+                    uploadedImage.classList.remove('hidden');
+                    imagePlaceholder.classList.add('hidden');
                     
-                    if (colorize) {
-                         context.fillStyle = value < 0 ? `rgba(239, 68, 68, ${Math.min(1, -value / 3)})` : `rgba(59, 130, 246, ${Math.min(1, value / 4)})`;
-                    } else {
-                        const intensity = Math.floor(value * 255);
-                        context.fillStyle = `rgb(${intensity}, ${intensity}, ${intensity})`;
-                    }
-                    context.fillRect(x * cellSize, y * cellSize, cellSize, cellSize);
-
-                     if (cellSize > 20) {
-                        context.fillStyle = value > 0.5 ? 'black' : 'white';
-                        if (value !== 0) {
-                           context.fillText(value.toFixed(1), x * cellSize + cellSize / 2, y * cellSize + cellSize / 2);
-                        }
-                    }
-
-                    if (highlight && x >= highlight.x && x < highlight.x + highlight.w && y >= highlight.y && y < highlight.y + highlight.h) {
-                        context.strokeStyle = highlight.color || 'red';
-                        context.lineWidth = 2;
-                        context.strokeRect(x * cellSize, y * cellSize, highlight.w * cellSize, highlight.h * cellSize);
-                    }
-                }
-            }
-        };
-
-        // --- Image Processing & Drawing ---
-        const processCanvas = () => {
-            const tempCanvas = document.createElement('canvas');
-            tempCanvas.width = INPUT_SIZE;
-            tempCanvas.height = INPUT_SIZE;
-            const tempCtx = tempCanvas.getContext('2d');
-
-            tempCtx.drawImage(canvases.drawing, 0, 0, INPUT_SIZE, INPUT_SIZE);
-            const imageData = tempCtx.getImageData(0, 0, INPUT_SIZE, INPUT_SIZE);
-            const data = imageData.data;
-            inputImage = [];
-
-            for (let i = 0; i < INPUT_SIZE; i++) {
-                const row = [];
-                for (let j = 0; j < INPUT_SIZE; j++) {
-                    const index = (i * INPUT_SIZE + j) * 4;
-                    const r = data[index];
-                    const g = data[index + 1];
-                    const b = data[index + 2];
-                    const a = data[index + 3];
-                    // Grayscale and normalize, considering transparency for drawn images
-                    const grayscale = (a > 0) ? (r * 0.299 + g * 0.587 + b * 0.114) / 255 : 0;
-                    row.push(grayscale);
-                }
-                inputImage.push(row);
-            }
-            drawMatrix(ctx.processed, inputImage, canvases.processed.width / INPUT_SIZE);
-        };
-        
-        const handleImageUpload = (e) => {
-            const reader = new FileReader();
-            reader.onload = (event) => {
-                const img = new Image();
-                img.onload = () => {
-                    ctx.drawing.fillStyle = "black";
-                    ctx.drawing.fillRect(0,0,canvases.drawing.width, canvases.drawing.height);
-                    ctx.drawing.drawImage(img, 0, 0, canvases.drawing.width, canvases.drawing.height);
-                    processCanvas();
+                    uploadedImage.onload = () => {
+                        startProcessVisualization();
+                    };
                 };
-                img.src = event.target.result;
-            };
-            if(e.target.files[0]) {
-                reader.readAsDataURL(e.target.files[0]);
+                reader.readAsDataURL(file);
             }
-        };
+        });
 
-        function startDraw(e) {
-            isDrawing = true;
-            [lastX, lastY] = [e.offsetX, e.offsetY];
-        }
-
-        function draw(e) {
-            if (!isDrawing) return;
-            ctx.drawing.strokeStyle = 'white';
-            ctx.drawing.lineWidth = 20;
-            ctx.drawing.lineCap = 'round';
-            ctx.drawing.lineJoin = 'round';
-            
-            ctx.drawing.beginPath();
-            ctx.drawing.moveTo(lastX, lastY);
-            ctx.drawing.lineTo(e.offsetX, e.offsetY);
-            ctx.drawing.stroke();
-            [lastX, lastY] = [e.offsetX, e.offsetY];
-        }
-        
-        function stopDraw() {
-            if(isDrawing) {
-                isDrawing = false;
-                processCanvas();
-            }
-        }
-
-        function clearDrawingCanvas() {
-            ctx.drawing.fillStyle = "black";
-            ctx.drawing.fillRect(0, 0, canvases.drawing.width, canvases.drawing.height);
-            processCanvas();
-        }
-
-        // --- Simulation Logic ---
-        const calculateConvolution = () => { /* ... (will be implemented inside runStep) ... */ };
-        const applyReLU = (matrix) => matrix.map(row => row.map(val => Math.max(0, val)));
-        const applyMaxPooling = (matrix) => {
-            const outputRows = Math.floor(matrix.length / 2);
-            const outputCols = Math.floor(matrix[0].length / 2);
-            const output = Array(outputRows).fill(0).map(() => Array(outputCols).fill(0));
-            
-            for (let y = 0; y < outputRows; y++) {
-                for (let x = 0; x < outputCols; x++) {
-                    let maxVal = -Infinity;
-                    maxVal = Math.max(
-                        matrix[y*2][x*2],
-                        matrix[y*2+1][x*2],
-                        matrix[y*2][x*2+1],
-                        matrix[y*2+1][x*2+1]
-                    );
-                    output[y][x] = maxVal;
-                }
-            }
-            return output;
-        };
-        const flatten = (matrix) => matrix.flat();
-
-        // --- Animation ---
-        const animateConvolutionStep = (x, y) => {
-            if (currentStep !== 2) return; // Stop if user moves on
-            const outputSize = inputImage.length - filter.length + 1;
-            statusLog.textContent = `Menghitung Konvolusi di posisi (${x}, ${y})...`;
-            drawMatrix(ctx.convInput, inputImage, 10, { highlight: { x, y, w: 3, h: 3, color: '#3b82f6' } });
-            
-            let sum = 0;
-            for (let fy = 0; fy < filter.length; fy++) {
-                for (let fx = 0; fx < filter.length; fx++) {
-                    sum += inputImage[y + fy][x + fx] * filter[fy][fx];
-                }
-            }
-            featureMap[y][x] = sum;
-            drawMatrix(ctx.featureMap, featureMap, 10, { colorize: true });
-            
-            let nextX = x + 1;
-            let nextY = y;
-            if (nextX >= outputSize) {
-                nextY++;
-                nextX = 0;
-            }
-
-            if (nextY < outputSize) {
-                animationFrameId = setTimeout(() => animateConvolutionStep(nextX, nextY), 10);
-            } else {
-                statusLog.textContent = 'Konvolusi selesai. Feature Map telah dibuat.';
-                nextButton.disabled = false;
-                nextButton.classList.remove('bg-gray-400', 'cursor-not-allowed');
-                nextButton.classList.add('bg-blue-600');
-            }
-        };
-        
-        // --- UI & Control ---
-        const updateUIForStep = (step) => {
-            document.querySelectorAll('.step-card').forEach((card, index) => {
-                if (index + 1 === step) {
-                    card.classList.add('active');
-                    if(step > 1) card.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                } else {
-                    card.classList.remove('active');
-                }
+        // 3. Fungsi untuk memulai visualisasi proses
+        function startProcessVisualization() {
+            predictionPlaceholder.innerText = 'Memulai proses analisis...';
+            let delay = 500;
+            processSteps.forEach((step, index) => {
+                setTimeout(() => {
+                    step.classList.add('active');
+                }, delay * (index + 1));
             });
 
-            nextButton.disabled = true;
-            nextButton.classList.add('bg-gray-400', 'cursor-not-allowed');
-            nextButton.classList.remove('bg-blue-600');
-            statusLog.textContent = '';
-        };
-
-        const runStep = (step) => {
-            updateUIForStep(step);
-            
-            switch (step) {
-                case 1:
-                    // This step is now passive, handled by user interaction.
-                    statusLog.textContent = 'Gambar, unggah, lalu klik "Mulai Simulasi"';
-                    startButton.disabled = false;
-                    break;
-                
-                case 2:
-                    const convOutputSize = INPUT_SIZE - filter.length + 1;
-                    featureMap = Array(convOutputSize).fill(0).map(() => Array(convOutputSize).fill(0));
-                    drawMatrix(ctx.convInput, inputImage, 10);
-                    const filterContainer = document.getElementById('filterMatrix');
-                    filterContainer.innerHTML = '';
-                    filter.flat().forEach(val => {
-                        const cell = document.createElement('div');
-                        cell.className = 'matrix-cell';
-                        cell.textContent = val;
-                        filterContainer.appendChild(cell);
-                    });
-                    animateConvolutionStep(0, 0);
-                    break;
-
-                case 3:
-                    drawMatrix(ctx.reluInput, featureMap, 10, { colorize: true });
-                    reluMap = applyReLU(featureMap);
-                    drawMatrix(ctx.reluOutput, reluMap, 10, { colorize: true });
-                    statusLog.textContent = 'ReLU diterapkan.';
-                    nextButton.disabled = false;
-                    nextButton.classList.remove('bg-gray-400', 'cursor-not-allowed');
-                    nextButton.classList.add('bg-blue-600');
-                    break;
-                
-                case 4:
-                    drawMatrix(ctx.poolingInput, reluMap, 10, { colorize: true });
-                    pooledMap = applyMaxPooling(reluMap);
-                    drawMatrix(ctx.poolingOutput, pooledMap, 10, { colorize: true });
-                    statusLog.textContent = 'Max Pooling mengurangi ukuran feature map.';
-                    nextButton.disabled = false;
-                    nextButton.classList.remove('bg-gray-400', 'cursor-not-allowed');
-                    nextButton.classList.add('bg-blue-600');
-                    break;
-                
-                case 5:
-                    drawMatrix(ctx.flattenInput, pooledMap, 10, { colorize: true });
-                    flattenedVector = flatten(pooledMap);
-                    const vectorContainer = document.getElementById('flattenedVector');
-                    vectorContainer.innerHTML = '';
-                    flattenedVector.forEach(val => {
-                        const cell = document.createElement('div');
-                        cell.className = 'matrix-cell bg-white';
-                        cell.style.width = '12px';
-                        cell.style.height = '12px';
-                        cell.style.fontSize = '8px';
-                        cell.textContent = val.toFixed(0);
-                        vectorContainer.appendChild(cell);
-                    });
-                    statusLog.textContent = 'Matriks diratakan menjadi vektor.';
-                     nextButton.disabled = false;
-                    nextButton.classList.remove('bg-gray-400', 'cursor-not-allowed');
-                    nextButton.classList.add('bg-blue-600');
-                    break;
-
-                case 6:
-                    const totalActivation = flattenedVector.reduce((sum, val) => sum + val, 0);
-                    const mockProbs = Array(10).fill(0.05); // Base probability
-                    if(totalActivation > 0) {
-                        // Simple logic: Distribute activation to likely digits
-                        // This is a complete mock-up for visualization
-                        const activations = flattenedVector.map(v => Math.max(0,v));
-                        const highActivationIndex = activations.indexOf(Math.max(...activations));
-                        const likelyDigit = highActivationIndex % 10; // guess a digit
-                        mockProbs[likelyDigit] += 0.5; // boost probability of likely digit
-                        const sum = mockProbs.reduce((a, b) => a + b, 0);
-                        mockProbs.forEach((p, i) => mockProbs[i] = p/sum); // normalize
-                    }
-
-                    const fcOutputContainer = document.getElementById('fcOutput').querySelector('.space-y-2');
-                    const svg = document.getElementById('connectionsSvg');
-                    fcOutputContainer.innerHTML = '';
-                    svg.innerHTML = '';
-
-                    mockProbs.forEach((prob, i) => {
-                        fcOutputContainer.innerHTML += `
-                            <div class="flex items-center">
-                                <span class="w-8 font-mono">${i}:</span>
-                                <div class="progress-bar-bg w-full h-4">
-                                    <div class="progress-bar-fill h-4 text-xs text-white text-right pr-1" style="width: ${prob * 100}%">${(prob*100).toFixed(0)}%</div>
-                                </div>
-                            </div>
-                        `;
-                        const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-                        line.setAttribute('x1', '20%'); line.setAttribute('y1', '50%');
-                        line.setAttribute('x2', '80%'); line.setAttribute('y2', `${i*10 + 5}%`);
-                        line.setAttribute('stroke', '#d1d5db'); line.setAttribute('stroke-width', '0.5');
-                        svg.appendChild(line);
-                    });
-                    
-                    statusLog.textContent = 'Vektor dihubungkan ke lapisan akhir.';
-                    nextButton.disabled = false;
-                    nextButton.classList.remove('bg-gray-400', 'cursor-not-allowed');
-                    nextButton.classList.add('bg-blue-600');
-                    break;
-                
-                case 7:
-                    const fcOutputDiv = document.getElementById('fcOutput');
-                    let maxProb = 0;
-                    let prediction = 0;
-                    fcOutputDiv.querySelectorAll('.progress-bar-fill').forEach((bar, index) => {
-                        const width = parseFloat(bar.style.width);
-                        if (width > maxProb) {
-                            maxProb = width;
-                            prediction = index;
-                        }
-                    });
-                    document.getElementById('finalPrediction').textContent = prediction;
-                     statusLog.textContent = 'Selesai! Model berhasil memprediksi gambar.';
-                     nextButton.disabled = true;
-                     nextButton.classList.add('bg-gray-400', 'cursor-not-allowed');
-                     nextButton.classList.remove('bg-blue-600');
-                    break;
-            }
-        };
-
-        const resetSimulation = () => {
-            currentStep = 0;
-            clearTimeout(animationFrameId);
-            cancelAnimationFrame(animationFrameId);
-            
-            updateUIForStep(0); // This hides all step highlights except the input one
-            document.getElementById('step-1').classList.add('active');
-
-            document.querySelectorAll('canvas').forEach(canvas => {
-                 if(canvas.id !== 'drawingCanvas' && canvas.id !== 'processedCanvas') {
-                    const c = canvas.getContext('2d');
-                    c.clearRect(0, 0, canvas.width, canvas.height);
-                 }
-            });
-            
-            document.getElementById('flattenedVector').innerHTML = '';
-            document.getElementById('fcOutput').querySelector('.space-y-2').innerHTML = '';
-            document.getElementById('connectionsSvg').innerHTML = '';
-            document.getElementById('finalPrediction').textContent = '?';
-
-            startButton.disabled = false;
-            nextButton.disabled = true;
-            nextButton.textContent = 'Langkah Berikutnya →';
-            nextButton.classList.add('bg-gray-400', 'cursor-not-allowed');
-            nextButton.classList.remove('bg-blue-600');
-            
-            statusLog.textContent = 'Gambar, unggah, lalu klik "Mulai Simulasi"';
-        };
-
-        // --- Event Listeners ---
-        startButton.addEventListener('click', () => {
-            processCanvas(); // ensure latest drawing is processed
-            if(inputImage.flat().reduce((a,b) => a+b, 0) === 0) {
-                statusLog.textContent = 'Kanvas kosong! Silakan gambar atau unggah gambar terlebih dahulu.';
+            // Setelah semua langkah visualisasi ditampilkan, jalankan prediksi
+            setTimeout(() => {
+                predictImage();
+            }, delay * (processSteps.length + 1));
+        }
+        
+        // 4. Fungsi untuk melakukan prediksi pada gambar
+        async function predictImage() {
+            if (!model) {
+                console.log("Model is not loaded yet.");
                 return;
             }
-            currentStep = 2; // Skip step 1, which is now the setup
-            startButton.disabled = true;
-            runStep(currentStep);
-        });
+            predictionLoader.classList.remove('hidden');
+            predictionPlaceholder.classList.add('hidden');
+            predictionList.innerHTML = '';
 
-        nextButton.addEventListener('click', () => {
-            if (currentStep < 7) {
-                currentStep++;
-                runStep(currentStep);
+            try {
+                const predictions = await model.classify(uploadedImage, 5);
+                console.log('Predictions: ', predictions);
+                displayPredictions(predictions);
+            } catch (err) {
+                console.error("Error during prediction:", err);
+                predictionList.innerHTML = '<li class="text-red-500">Terjadi kesalahan saat menganalisis gambar.</li>';
+            } finally {
+                predictionLoader.classList.add('hidden');
             }
-        });
-        
-        resetButton.addEventListener('click', () => {
-            clearDrawingCanvas();
-            resetSimulation();
-        });
-        
-        imageUploader.addEventListener('change', handleImageUpload);
-        clearCanvasButton.addEventListener('click', clearDrawingCanvas);
-        canvases.drawing.addEventListener('mousedown', startDraw);
-        canvases.drawing.addEventListener('mousemove', draw);
-        canvases.drawing.addEventListener('mouseup', stopDraw);
-        canvases.drawing.addEventListener('mouseleave', stopDraw);
+        }
 
-        // --- Initial setup ---
-        clearDrawingCanvas();
-        resetSimulation();
-    });
+        // 5. Fungsi untuk menampilkan hasil prediksi
+        function displayPredictions(predictions) {
+            predictionList.innerHTML = ''; 
+            if (predictions && predictions.length > 0) {
+                predictions.forEach(prediction => {
+                    const listItem = document.createElement('li');
+                    listItem.className = 'bg-gray-50 p-3 rounded-lg flex items-center justify-between';
+                    
+                    const className = prediction.className.split(',')[0]; 
+                    const probability = Math.round(prediction.probability * 100);
+
+                    const nameSpan = document.createElement('span');
+                    nameSpan.className = 'text-gray-700 font-medium capitalize';
+                    nameSpan.innerText = className;
+
+                    const probWrapper = document.createElement('div');
+                    probWrapper.className = 'w-1/2 flex items-center';
+
+                    const progressBarContainer = document.createElement('div');
+                    progressBarContainer.className = 'w-full bg-gray-200 rounded-full h-2.5 mr-2';
+
+                    const progressBar = document.createElement('div');
+                    progressBar.className = 'bg-blue-500 h-2.5 rounded-full';
+                    progressBar.style.width = `${probability}%`;
+                    
+                    progressBarContainer.appendChild(progressBar);
+
+                    const probText = document.createElement('span');
+                    probText.className = 'text-sm font-semibold text-gray-800';
+                    probText.innerText = `${probability}%`;
+                    
+                    probWrapper.appendChild(progressBarContainer);
+                    probWrapper.appendChild(probText);
+
+                    listItem.appendChild(nameSpan);
+                    listItem.appendChild(probWrapper);
+                    
+                    predictionList.appendChild(listItem);
+                });
+            } else {
+                 predictionPlaceholder.innerText = 'Tidak dapat mengenali objek pada gambar.';
+                 predictionPlaceholder.classList.remove('hidden');
+            }
+        }
+
+        // Panggil fungsi untuk memuat model saat halaman dimuat
+        loadModel();
     </script>
 </body>
 </html>
-
