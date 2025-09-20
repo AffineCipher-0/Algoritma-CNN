@@ -152,19 +152,19 @@
             <div id="process-visualization-container" class="hidden mt-8 pt-6 border-t-2 border-dashed border-green-700">
                 <div class="process-step flex items-start space-x-4 mb-4">
                     <div class="flex-shrink-0 text-yellow-300 font-bold text-xl">[OK]</div>
-                    <div><p class="text-white text-xl">INITIATE :: INPUT STREAM</p></div>
+                    <div><p class="text-white text-xl">INITIATE :: INPUT STREAM <span class="text-yellow-300">(224x224x3)</span></p></div>
                 </div>
                 <div class="process-step flex items-start space-x-4 mb-4">
                     <div class="flex-shrink-0 text-yellow-300 font-bold text-xl">[OK]</div>
-                    <div><p class="text-white text-xl">EXECUTE :: CONVOLUTIONAL LAYER</p></div>
+                    <div><p class="text-white text-xl">EXECUTE :: CONVOLUTIONAL LAYER <span class="text-yellow-300">-> [FEATURE MAPS]</span></p></div>
                 </div>
                 <div class="process-step flex items-start space-x-4 mb-4">
                     <div class="flex-shrink-0 text-yellow-300 font-bold text-xl">[OK]</div>
-                    <div><p class="text-white text-xl">OPTIMIZE :: POOLING LAYER</p></div>
+                    <div><p class="text-white text-xl">OPTIMIZE :: POOLING LAYER <span class="text-yellow-300">-> [REDUCED MAPS]</span></p></div>
                 </div>
                  <div class="process-step flex items-start space-x-4 mb-4">
                     <div class="flex-shrink-0 text-yellow-300 font-bold text-xl">[OK]</div>
-                    <div><p class="text-white text-xl">CLASSIFY :: FULLY CONNECTED LAYER</p></div>
+                    <div><p class="text-white text-xl">CLASSIFY :: FULLY CONNECTED LAYER <span class="text-yellow-300">-> [1000 CLASSES]</span></p></div>
                 </div>
             </div>
         </div>
